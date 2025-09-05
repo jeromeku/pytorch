@@ -1,0 +1,83 @@
+{"ts":"2025-09-04T16:08:52.597870315+00:00","cwd":"/home/jeromeku/pytorch","cmd":"codex-initial-log-setup","exit_code":0,"duration_ms":0}
+{"ts":"2025-09-04T16:11:51.001217327+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "torch\.compile|compile_fx|AOTAutograd|eval_frame|convert_frame|bytecode|pattern_matcher|lowering|scheduler|codegen|passes|pass_manager" -g "torch/**"","exit_code":0,"duration_ms":42}
+{"ts":"2025-09-04T16:12:14.221852357+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "def compile_fx|class Scheduler|def lower|def run|def schedule|def apply_passes|pattern_matcher|def decompose|def expand|def rewrite|pass|pipeline|PassManager|IRGraph|GraphLowering" torch/_inductor","exit_code":0,"duration_ms":29}
+{"ts":"2025-09-04T16:12:14.255191092+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "def compile\(|eval_frame|convert_frame|bytecode|def transform|PassManager|optimize\(|aot_autograd|def export|fx\.Graph|fx\.passes|decompose|pattern_matcher|recompilation" torch/_dynamo","exit_code":0,"duration_ms":27}
+{"ts":"2025-09-04T16:12:26.023782125+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/compile_fx.py | sed -n "1,200p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:12:26.049221284+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/compile_fx.py | sed -n "200,500p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:12:37.437232746+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/compile_fx.py | sed -n "500,1000p"","exit_code":0,"duration_ms":22}
+{"ts":"2025-09-04T16:12:48.421243267+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "^def compile_fx|class .*Compiled.*|def fx_codegen_and_compile" torch/_inductor/compile_fx.py","exit_code":0,"duration_ms":22}
+{"ts":"2025-09-04T16:12:48.447921354+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/compile_fx.py | sed -n "1000,1400p"","exit_code":0,"duration_ms":20}
+{"ts":"2025-09-04T16:12:57.590393220+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/compile_fx.py | sed -n "1400,2000p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:12:57.615684960+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/compile_fx.py | sed -n "2000,2600p"","exit_code":0,"duration_ms":20}
+{"ts":"2025-09-04T16:13:05.687091976+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/compile_fx.py | sed -n "2360,2600p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:13:13.042521691+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/compile_fx.py | sed -n "2600,3200p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:13:26.730499209+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/fx_passes/pre_grad.py | sed -n "1,260p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:13:26.756381663+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/fx_passes/joint_graph.py | sed -n "1,240p"","exit_code":0,"duration_ms":20}
+{"ts":"2025-09-04T16:13:26.781091161+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/fx_passes/post_grad.py | sed -n "1,300p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:14:09.616212504+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "def pre_grad_passes|def post_grad_passes|def joint_graph_passes" torch/_inductor/fx_passes/*.py","exit_code":0,"duration_ms":24}
+{"ts":"2025-09-04T16:14:19.201766041+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/fx_passes/pre_grad.py | sed -n "260,520p"","exit_code":0,"duration_ms":20}
+{"ts":"2025-09-04T16:14:29.342038001+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/fx_passes/post_grad.py | sed -n "1,140p"","exit_code":0,"duration_ms":20}
+{"ts":"2025-09-04T16:14:29.367032323+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/fx_passes/post_grad.py | sed -n "140,380p"","exit_code":0,"duration_ms":20}
+{"ts":"2025-09-04T16:14:40.651357247+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/fx_passes/joint_graph.py | sed -n "520,640p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:14:55.501625421+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "class GraphLowering|def run\(|def codegen|def codegen_with_cpp_wrapper|def lower|def schedule" torch/_inductor/graph.py","exit_code":0,"duration_ms":22}
+{"ts":"2025-09-04T16:14:55.528524632+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/graph.py | sed -n "1,200p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:14:55.553791440+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/graph.py | sed -n "200,520p"","exit_code":0,"duration_ms":20}
+{"ts":"2025-09-04T16:14:55.577942656+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/graph.py | sed -n "520,960p"","exit_code":0,"duration_ms":20}
+{"ts":"2025-09-04T16:15:13.692984587+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "class Scheduler|def schedule\(|def lower\(" torch/_inductor/*.py","exit_code":0,"duration_ms":24}
+{"ts":"2025-09-04T16:15:13.721388667+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "def schedule\(|class Scheduler" torch/_inductor/scheduler.py","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:15:13.747874719+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/scheduler.py | sed -n "1,200p"","exit_code":0,"duration_ms":22}
+{"ts":"2025-09-04T16:15:13.774348821+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/scheduler.py | sed -n "200,520p"","exit_code":0,"duration_ms":19}
+{"ts":"2025-09-04T16:15:28.405536796+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "def call_function\(|def call_method\(|def placeholder\(|def output\(" torch/_inductor/graph.py","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:15:28.431424053+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/graph.py | sed -n "960,1300p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:15:44.990110631+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "def lower_|lowerings =|class.*Lower|layout_constraints|needs_realized_inputs|fallback_handler" torch/_inductor/lowering.py","exit_code":0,"duration_ms":23}
+{"ts":"2025-09-04T16:15:45.017236973+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/lowering.py | sed -n "1,200p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:15:45.044164349+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/lowering.py | sed -n "200,560p"","exit_code":0,"duration_ms":22}
+{"ts":"2025-09-04T16:15:55.468301494+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "Scheduler\(" torch/_inductor/graph.py","exit_code":0,"duration_ms":22}
+{"ts":"2025-09-04T16:15:55.494875592+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/graph.py | sed -n "1820,2170p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:16:29.962992560+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "def schedule\(|def run\(|def codegen\(|def make_kernels|fuse|partition|plan_memory|emit|def generate" torch/_inductor/scheduler.py","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:16:29.989143744+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/scheduler.py | sed -n "1950,2320p"","exit_code":0,"duration_ms":22}
+{"ts":"2025-09-04T16:16:30.015242261+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/scheduler.py | sed -n "2320,2800p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:16:41.135534717+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/scheduler.py | sed -n "1160,1230p"","exit_code":0,"duration_ms":22}
+{"ts":"2025-09-04T16:16:41.162010849+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/scheduler.py | sed -n "1230,1320p"","exit_code":0,"duration_ms":22}
+{"ts":"2025-09-04T16:16:41.188641807+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/scheduler.py | sed -n "1320,1400p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:16:54.237090840+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/scheduler.py | sed -n "2040,2160p"","exit_code":0,"duration_ms":23}
+{"ts":"2025-09-04T16:16:54.264386243+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/scheduler.py | sed -n "2160,2360p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:16:54.290585296+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/scheduler.py | sed -n "2360,2600p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:17:08.157698189+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "eval_frame|convert_frame|def compile\(|GraphModule|PassManager|bytecode|InstructionTranslator|def transform_code|def transform|optimize\(" torch/_dynamo/*.py","exit_code":0,"duration_ms":25}
+{"ts":"2025-09-04T16:17:21.699751781+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "class OptimizedModule|def optimize\(|def run|def run_once|def compile\(|def fullgraph_capture|def convert_frame|FrameState|InstructionTranslator" torch/_dynamo/*.py","exit_code":0,"duration_ms":23}
+{"ts":"2025-09-04T16:17:21.727251117+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_dynamo/eval_frame.py | sed -n "1,200p"","exit_code":0,"duration_ms":22}
+{"ts":"2025-09-04T16:17:21.753295299+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_dynamo/eval_frame.py | sed -n "200,520p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:17:21.778437316+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_dynamo/convert_frame.py | sed -n "1,200p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:17:21.803697864+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_dynamo/convert_frame.py | sed -n "200,520p"","exit_code":0,"duration_ms":19}
+{"ts":"2025-09-04T16:17:36.824334375+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_dynamo/eval_frame.py | sed -n "1,280p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:17:36.850224399+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_dynamo/convert_frame.py | sed -n "1,280p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:17:53.711289803+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "def optimize\(|class OptimizedModule|def run_once\(" torch/_dynamo/eval_frame.py","exit_code":0,"duration_ms":22}
+{"ts":"2025-09-04T16:17:53.737406641+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_dynamo/eval_frame.py | sed -n "520,980p"","exit_code":0,"duration_ms":22}
+{"ts":"2025-09-04T16:18:07.592454170+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_dynamo/convert_frame.py | sed -n "1,260p"","exit_code":0,"duration_ms":22}
+{"ts":"2025-09-04T16:18:07.619410864+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "def convert_frame|def compile\(|def call|def run|def _compile|def call_user_compiler" torch/_dynamo/convert_frame.py","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:18:07.644957618+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_dynamo/convert_frame.py | sed -n "260,740p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:18:07.670136340+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_dynamo/convert_frame.py | sed -n "740,1280p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:18:21.312744920+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "class ConvertFrame|class ConvertFrameAssert|def fullgraph_capture|def call_user_compiler|def convert_frame|def call_compile_backend" torch/_dynamo/convert_frame.py","exit_code":0,"duration_ms":22}
+{"ts":"2025-09-04T16:18:21.339439228+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_dynamo/convert_frame.py | sed -n "680,1120p"","exit_code":0,"duration_ms":20}
+{"ts":"2025-09-04T16:18:34.807961697+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "def _compile_inner\(|def call_compile_backend|def call_user_compiler" torch/_dynamo/convert_frame.py","exit_code":0,"duration_ms":23}
+{"ts":"2025-09-04T16:18:34.835398666+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_dynamo/convert_frame.py | sed -n "1120,1720p"","exit_code":0,"duration_ms":20}
+{"ts":"2025-09-04T16:18:45.238153924+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "def compile_frame\(|def call_compile_backend|def call_user_compiler" torch/_dynamo/*.py","exit_code":0,"duration_ms":25}
+{"ts":"2025-09-04T16:18:54.451855110+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_dynamo/convert_frame.py | sed -n "960,1120p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:18:54.477316216+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_dynamo/output_graph.py | sed -n "2000,2120p"","exit_code":0,"duration_ms":20}
+{"ts":"2025-09-04T16:19:04.849920916+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/__init__.py | sed -n "2360,2400p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:19:04.875505697+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/__init__.py | sed -n "2400,2600p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:19:25.458221453+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "torch\.compile\(" test/inductor test/dynamo | head -n 80","exit_code":0,"duration_ms":27}
+{"ts":"2025-09-04T16:19:25.490042118+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "pre_grad_passes\(" test/inductor test/dynamo || true","exit_code":0,"duration_ms":28}
+{"ts":"2025-09-04T16:19:25.522550861+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "post_grad_passes\(" test/inductor test/dynamo || true","exit_code":0,"duration_ms":29}
+{"ts":"2025-09-04T16:19:25.556785557+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "joint_graph_passes\(" test/inductor test/dynamo || true","exit_code":0,"duration_ms":28}
+{"ts":"2025-09-04T16:19:48.642788097+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba test/inductor/test_provenance_tracing.py | sed -n "470,520p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:19:48.668592855+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba test/inductor/test_custom_post_grad_passes.py | sed -n "160,220p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:19:48.693784184+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba test/inductor/test_pattern_matcher.py | sed -n "740,900p"","exit_code":0,"duration_ms":20}
+{"ts":"2025-09-04T16:20:03.823026284+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "bytecode|eval_frame|convert_frame|InstructionTranslator" test/dynamo | head -n 60","exit_code":0,"duration_ms":25}
+{"ts":"2025-09-04T16:20:27.275628318+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "def log_ir_pre_fusion|def log_ir_post_fusion|def save_args_for_compile_fx_inner|def create_mapping_pre_post_grad_nodes|class DebugContext|def reset_provenance_globals|trace\.|dump|artifact" torch/_inductor | head -n 80","exit_code":0,"duration_ms":27}
+{"ts":"2025-09-04T16:20:52.978033135+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/debug.py | sed -n "680,860p"","exit_code":0,"duration_ms":22}
+{"ts":"2025-09-04T16:21:07.584659554+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "remove_dead_code\(|remove_pointless_jumps\(|transform_code_object\(" torch/_dynamo/*.py","exit_code":0,"duration_ms":24}
+{"ts":"2025-09-04T16:21:24.629857541+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_dynamo/convert_frame.py | sed -n "820,860p"","exit_code":0,"duration_ms":21}
+{"ts":"2025-09-04T16:22:22.922503893+00:00","cwd":"/home/jeromeku/pytorch","cmd":"rg -n "class DebugFormatter|def _write_ir\(" torch/_inductor/debug.py","exit_code":0,"duration_ms":20}
+{"ts":"2025-09-04T16:22:22.947845772+00:00","cwd":"/home/jeromeku/pytorch","cmd":"nl -ba torch/_inductor/debug.py | sed -n "360,560p"","exit_code":0,"duration_ms":20}
+{"ts":"2025-09-04T16:25:05.450433486+00:00","cwd":"/home/jeromeku/pytorch","cmd":"git diff --no-ext-diff --name-status","exit_code":0,"duration_ms":28}
