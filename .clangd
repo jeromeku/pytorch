@@ -1,8 +1,8 @@
 CompileFlags:
   Compiler: /usr/local/cuda/bin/nvcc
   Add:
-    -- -I/home/jeromeku/pytorch/.torch-env/lib/python3.12/site-packages/torch/include 
-    -- -I/home/jeromeku/pytorch/.torch-env/lib/python3.12/site-packages/torch/include/torch/csrc/api/include
+    - -I/home/jeromeku/pytorch/.torch-env/lib/python3.12/site-packages/torch/include 
+    - -I/home/jeromeku/pytorch/.torch-env/lib/python3.12/site-packages/torch/include/torch/csrc/api/include
     - --cuda-path=/usr/local/cuda
     - --cuda-gpu-arch=sm_100a
     - -I/usr/local/cuda/include
