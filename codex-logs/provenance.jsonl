@@ -106,3 +106,8 @@
 {"ts": "2025-09-09T14:09:20Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add fusion docs) codex/inductor-fusion/fusion_logs_basic.py", "exit_code": 0, "duration_ms": 0}
 {"ts": "2025-09-09T14:09:20Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add fusion docs) codex/inductor-fusion/fusion_kernels_count.py", "exit_code": 0, "duration_ms": 0}
 {"ts": "2025-09-09T14:09:20Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add fusion docs) codex/inductor-fusion/fusion_index_mismatch.py", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:10:05Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add fusion sandbox demo)", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:10:06Z", "cwd": "/home/jeromeku/pytorch", "cmd": "chmod +x demo_fusion_sandbox.py", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:10:07Z", "cwd": "/home/jeromeku/pytorch", "cmd": "update README for demos", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:11:05Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (enhance fusion sandbox: CSV, variants, backend classify)", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:11:06Z", "cwd": "/home/jeromeku/pytorch", "cmd": "update demos README examples", "exit_code": 0, "duration_ms": 0}
