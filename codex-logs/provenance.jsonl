@@ -94,3 +94,15 @@
 {"ts": "2025-09-09T14:07:41Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add inductor_config_demos.py)", "exit_code": 0, "duration_ms": 0}
 {"ts": "2025-09-09T14:07:42Z", "cwd": "/home/jeromeku/pytorch", "cmd": "chmod +x codex/scripts/inductor_config_demos.py", "exit_code": 0, "duration_ms": 0}
 {"ts": "2025-09-09T14:07:43Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (update session log for config docs)", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:08:30Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add snippets) codex/snippets/fusion_kernel_count_demo.py", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:08:30Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add snippets) codex/snippets/cudagraphs_runtime_demo.py", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:08:30Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add snippets) codex/snippets/autotune_codegen_demo.py", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:08:30Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add snippets) codex/snippets/functionalize_decompose_demo.py", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:08:30Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add snippets) codex/snippets/caching_hotload_demo.py", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:08:30Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add snippets) codex/snippets/postgrad_normalization_demo.py", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:08:30Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add snippets) codex/snippets/capture_guards_demo.py", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:09:20Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add fusion docs) codex/inductor-fusion/fusion_epilogue_mm.py", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:09:20Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add fusion docs) codex/inductor-fusion/README.md", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:09:20Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add fusion docs) codex/inductor-fusion/fusion_logs_basic.py", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:09:20Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add fusion docs) codex/inductor-fusion/fusion_kernels_count.py", "exit_code": 0, "duration_ms": 0}
+{"ts": "2025-09-09T14:09:20Z", "cwd": "/home/jeromeku/pytorch", "cmd": "apply_patch (add fusion docs) codex/inductor-fusion/fusion_index_mismatch.py", "exit_code": 0, "duration_ms": 0}

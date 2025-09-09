@@ -20,183 +20,333 @@ See `codex/scripts/inductor_component_tests.sh` for scripted shortcuts.
 ---
 
 ## Stage 2.1 — Dynamo Capture & Guards
-Focus: graph breaks, guard precision, dynamic shapes, stance/counters, control flow.
+What this stage does
+- Intercepts Python frames and builds an FX graph (TorchDynamo), recording guards about shapes/dtypes/devices to decide reuse vs recompile.
+- Good coverage checks: no accidental graph breaks, minimal recompiles, correct handling of dynamic shapes, robust control-flow capture.
 
-Key modules (representative tests)
+Where these tests fit in the pipeline
+- Entry point: `torch.compile` → Dynamo trace → AOTAutograd export → Inductor compile.
+- Guard/capture policy directly influences cache keys and recompile frequency downstream.
+
+Representative tests and themes
 - test/inductor/test_control_flow.py
-  - test_cond_simple_control_flow:324
-  - test_cond_simple_with_int_closure:338
-  - test_cond_control_flow_with_precomputed_size:366
+  - test_cond_simple_control_flow:324 exercises if/else capture and branch guards (device/dtype/shape), ensuring no spurious breaks.
+  - test_cond_simple_with_int_closure:338 checks closure-captured scalars still allow a single compiled graph.
+  - test_cond_control_flow_with_precomputed_size:366 ensures size-dependent branches are guarded precisely under CUDA requirements.
 - test/inductor/test_torchinductor.py
-  - setUp/tearDown resets: 341, 342, 348
-  - test_bool:989
+  - setUp/tearDown resets: 341, 342, 348 call `torch._dynamo.reset()` and `torch._inductor.metrics.reset()` to isolate runs between tests.
+  - check_model helper: 418 normalizes eager vs compiled parity and asserts numerics/strides/gradients.
 - test/inductor/test_torchinductor_dynamic_shapes.py
-  - test_constant_fold_uniform_value_dynamic:182
-  - test_arange_dynamic:227
-- test/inductor/test_torchinductor_codegen_dynamic_shapes.py
-  - (module exercises codegen paths under dynamic shapes)
+  - test_constant_fold_uniform_value_dynamic:182 validates shape reasoning under dynamic input, avoiding unnecessary recompiles.
+  - test_arange_dynamic:227 probes dynamic loop bounds and symbol handling.
 
-Commands
-- Basic capture and guards: `pytest -q test/inductor/test_control_flow.py::test_cond_simple_control_flow`
-- Dynamic shapes smoke: `pytest -q test/inductor/test_torchinductor_dynamic_shapes.py::test_arange_dynamic`
+Helpful source anchors
+- Reset helpers: `test/inductor/test_torchinductor.py:341`, `:342`, `:348`; `torch/_dynamo/__init__.py:112` (reset definition).
+- FX post-grad logs: `torch/testing/_internal/logging_utils.py:192` (`logs_to_string`).
 
-Notes
-- Inspect FX post-grad after capture using `logs_to_string("torch._inductor.compile_fx", "post_grad_graphs")` in a local repro.
+Minimal runnable snippets (no test suite required)
+1) Verify capture and recompiles via counters
+```
+import torch
+from torch._dynamo.utils import counters
+
+def branchy(x, t):
+    return x.sin() if t > 0 else x.cos()
+
+x = torch.randn(8, device=("cuda" if torch.cuda.is_available() else "cpu"))
+counters.clear()
+g = torch.compile(branchy)
+g(x, 1)
+hit_before = counters["inductor"].get("fxgraph_cache_hit", 0)
+g(x, 1)  # same guards
+print("cache hits +=", counters["inductor"].get("fxgraph_cache_hit", 0) - hit_before)
+
+# New guard (different branch)
+g(x, -1)
+print("cache misses:", counters["inductor"].get("fxgraph_cache_miss", 0))
+```
+
+2) Inspect post‑grad FX graph after capture
+```
+import torch
+from torch.testing._internal.logging_utils import logs_to_string
+
+def f(x):
+    y = x.view(x.shape)
+    return (y + 1).relu()
+
+log_stream, ctx = logs_to_string("torch._inductor.compile_fx", "post_grad_graphs")
+with ctx():
+    torch.compile(f)(torch.randn(4))
+
+print(log_stream.getvalue())
+```
 
 ---
 
 ## Stage 2.2 — Functionalization & Decompositions
-Focus: mutation → functional graphs, PrimTorch decompositions, custom decompositions.
+What this stage does
+- Removes mutation by converting in‑place ops to functional form (functionalization), enabling clean AOT export.
+- Applies decompositions (PrimTorch/Inductor) to lower complex ops into fusion‑friendly primitives (e.g., mm → blocks + epilogues).
 
-Key modules
+Representative tests and themes
 - test/inductor/test_auto_functionalize.py
-  - test_auto_functionalize_can_with_default:20
-  - test_auto_functionalize_can_with_none_return:43
+  - test_auto_functionalize_can_with_default:20 checks that in-place semantics are properly rewritten.
+  - test_auto_functionalize_can_with_none_return:43 verifies functionalization under odd returns.
 - test/inductor/test_decompose_mem_bound_mm.py
-  - test_decompose_bmm:105
-  - test_decompose_bmm_cpu:142
-- test/inductor/test_mmdecomp.py
-  - (dense decomposition tests; e.g., op-specific paths)
+  - test_decompose_bmm:105 (CUDA) and :142 (CPU) ensure mem‑bound bmm decompositions route to intended kernels.
 - test/inductor/test_pad_mm.py
-  - test_pad_mm_dyn_m:31
-  - test_pad_mm_dyn_n:101
+  - test_pad_mm_dyn_m:31 and test_pad_mm_dyn_n:101 validate the `pad_mm` pass for dynamic M/N with padding before GEMM.
 - test/inductor/test_binary_folding.py
-  - test_conv_binary_folding:41
-  - test_conv_bn_folding:158
-- test/inductor/test_inplacing_pass.py
-  - (reinplacing / mutation canonicalization)
+  - test_conv_binary_folding:41 and test_conv_bn_folding:158 confirm folding patterns pre‑fusion.
 
-Commands
-- Decompose BMM: `pytest -q test/inductor/test_decompose_mem_bound_mm.py::test_decompose_bmm`
-- Pad-MM canonicalization: `pytest -q test/inductor/test_pad_mm.py::test_pad_mm_dyn_m`
+Helpful source anchors
+- pad_mm implementation: `torch/_inductor/fx_passes/pad_mm.py:761` (pad_mm), invoked from post‑grad pipeline.
+
+Minimal runnable snippets
+1) Show decomposition effect in post‑grad graph
+```
+import torch
+from torch.testing._internal.logging_utils import logs_to_string
+
+def mm_chain(a, b):
+    return (a @ b).relu()
+
+a = torch.randn(32, 64)
+b = torch.randn(64, 32)
+
+ls, ctx = logs_to_string("torch._inductor.compile_fx", "post_grad_graphs")
+with ctx():
+    torch.compile(mm_chain)(a, b)
+print(ls.getvalue())  # look for normalized/view/reshape, fused epilogue patterns
+```
+
+2) Functionalization of in‑place ops
+```
+import torch
+
+def inplace(x):
+    y = x.clone()
+    y.add_(1)
+    return y
+
+compiled = torch.compile(inplace)
+print(compiled(torch.randn(4)))  # Should functionalize add_
+```
 
 ---
 
-## Stage 2.3 — FX Post-Grad Shaping & Partitioning
-Focus: post-grad normalization, custom passes, partitioners, pattern rewrites.
+## Stage 2.3 — FX Post‑Grad Shaping & Partitioning
+What this stage does
+- After AOTAutograd, Inductor runs post‑grad passes to canonicalize patterns (split/cat, view/reshape), fold constants, and optionally partition graphs.
+- Pattern matchers ensure expected shapes/patterns before scheduling.
 
-Key modules
+Representative tests and themes
 - test/inductor/test_custom_post_grad_passes.py
-  - test_custom_joint_pass_pre:147
-  - test_custom_joint_pass_post:159
+  - test_custom_joint_pass_pre:147 / test_custom_joint_pass_post:159 show how pre/post passes modify graphs deterministically.
 - test/inductor/test_custom_partitioner_fn.py
-  - test_custom_partitioner_fn:30
+  - test_custom_partitioner_fn:30 injects a custom partitioning function to isolate parts of the graph.
 - test/inductor/test_split_cat_fx_passes.py
-  - test_split_normalization:36
-  - test_consecutive_split_merge:146
+  - test_split_normalization:36 and test_consecutive_split_merge:146 verify split→cat normalization to preferred idioms.
 - test/inductor/test_split_cat_fx_aten_passes.py
-  - test_split_cat_post_grad:259
-  - test_select_cat_post_grad:328
+  - test_split_cat_post_grad:259 and test_select_cat_post_grad:328 ensure ATen‑side normalization aligns with post‑grad rules.
 - test/inductor/test_pattern_matcher.py
-  - test_mm_plus_mm:88
-  - test_fused_int_mm_mul:151
-- test/inductor/test_mkldnn_pattern_matcher.py
-  - rich suite (e.g., pattern matcher variants)
+  - test_mm_plus_mm:88 / test_fused_int_mm_mul:151 confirm matcher rules target intended fusion shapes.
 
-Commands
-- Verify a custom pass runs: `pytest -q test/inductor/test_custom_post_grad_passes.py::test_custom_joint_pass_post`
-- Split/Cat normalization: `pytest -q test/inductor/test_split_cat_fx_passes.py::test_split_normalization`
+Minimal runnable snippets
+1) Observe split/cat normalization in logs
+```
+import torch
+from torch.testing._internal.logging_utils import logs_to_string
+
+def split_cat(x):
+    a, b = torch.tensor_split(x, 2, dim=-1)
+    return torch.cat([a, b], dim=-1)
+
+ls, ctx = logs_to_string("torch._inductor.compile_fx", "post_grad_graphs")
+with ctx():
+    torch.compile(split_cat)(torch.randn(4, 8))
+print(ls.getvalue())
+```
+
+2) Custom partitioner sketch (conceptual)
+```
+# Shows how a custom partitioner could be wired; consult
+# test/inductor/test_custom_partitioner_fn.py:30 for a working example.
+import torch
+from torch._inductor.custom_graph_pass import CustomPartitionerFn
+
+class MyPartitioner(CustomPartitionerFn):
+    def __call__(self, gm, inputs):  # decide partitioning
+        return [(gm.graph.nodes, {})]
+
+with torch._inductor.config.patch({"custom_graph_passes": []}):
+    # apply via compile config hook (see compile_fx)
+    pass
+```
 
 ---
 
 ## Stage 2.4 — Inductor IR & Fusion
-Focus: scheduler legality, loop IR transforms, fusion groups, segmented trees.
+What this stage does
+- Lowers the FX graph into Inductor’s Loop IR, decides legal fusion groups, schedules loops, and applies tiling/ordering transforms.
 
-Key modules
-- test/inductor/test_inductor_scheduler.py
-  - (scheduler legality and transformations)
-- test/inductor/test_loop_ordering.py
-  - class TestTiling:955 (tiling/ordering suite)
-- test/inductor/test_kernel_optimization.py
-  - class TestKernelOptimization:31
-- test/inductor/test_segmented_tree.py
-  - test_basic_construction:46
-  - test_max_query_matches_naive:57
-- test/inductor/test_group_batch_fusion.py
-  - (grouped fusion checks for attention-like patterns)
-- test/inductor/test_fx_fusion.py
-  - (fx-driven fusion expectations)
+Representative tests and themes
+- test/inductor/test_inductor_scheduler.py — scheduler legality and transform decisions across devices.
+- test/inductor/test_loop_ordering.py — class TestTiling:955 covers tiling heuristics and ordering profitability.
+- test/inductor/test_kernel_optimization.py — class TestKernelOptimization:31 validates kernel‑level simplifications.
+- test/inductor/test_segmented_tree.py — test_basic_construction:46, test_max_query_matches_naive:57 exercise segmented tree data structures that back fusion decisions.
+- test/inductor/test_group_batch_fusion.py — attention/group‑batch patterns and tradeoffs.
 
-Commands
-- Loop ordering/tiling: `pytest -q test/inductor/test_loop_ordering.py::TestTiling`
-- Segmented tree ops: `pytest -q test/inductor/test_segmented_tree.py::test_basic_construction`
+Minimal runnable snippets
+1) Fusion group size impact (kernel count)
+```
+import torch
+from torch._inductor.utils import run_and_get_kernels
+
+def f(x):
+    y = x.sin(); z = y * 2 + y.cos(); return z.relu()
+
+X = torch.randn(1 << 16)
+with torch._inductor.config.patch({"max_fusion_size": 64}):
+    _, k1 = run_and_get_kernels(torch.compile(f), X)
+with torch._inductor.config.patch({"max_fusion_size": 1}):
+    _, k2 = run_and_get_kernels(torch.compile(f), X)
+print("kernels:", len(k1), "→", len(k2))
+```
+
+2) Reduction unrolling threshold
+```
+import torch
+from torch._inductor.utils import run_and_get_triton_code
+
+def reduce_small(x): return x.sum(dim=-1)
+X = torch.randn(32, 4)
+with torch._inductor.config.patch({"unroll_reductions_threshold": 1}):
+    c1 = run_and_get_triton_code(torch.compile(reduce_small), X)
+with torch._inductor.config.patch({"unroll_reductions_threshold": 128}):
+    c2 = run_and_get_triton_code(torch.compile(reduce_small), X)
+print("contains 'reduce' op?", ("reduce" in c1), ("reduce" in c2))
+```
 
 ---
 
 ## Stage 2.5 — Codegen & Autotune (Triton/CUTLASS)
-Focus: Triton codegen, CUTLASS backend, autotune knobs, kernel templates.
+What this stage does
+- Emits backend kernels (Triton/CUTLASS/CPP), and optionally autotunes them (compile‑time or runtime) for performance.
 
-Key modules
+Representative tests and themes
 - test/inductor/test_triton_kernels.py
-  - test_triton_kernel_with_kernel_param:100
-  - test_triton_kernel_functionalize:167
+  - test_triton_kernel_with_kernel_param:100 ensures kernel parameter plumbing behaves as expected.
+  - test_triton_kernel_functionalize:167 validates functionalization around Triton kernels.
 - test/inductor/test_triton_heuristics.py
-  - test_triton_config:82
-  - test_artificial_zgrid:132
+  - test_triton_config:82 and test_artificial_zgrid:132 probe grid/config heuristics.
 - test/inductor/test_cutlass_backend.py
-  - test_check_paths:203
-  - test_max_autotune_cutlass_threshold:218
+  - test_check_paths:203 validates CUTLASS integration paths; test_max_autotune_cutlass_threshold:218 gates autotune intensity.
 - test/inductor/test_max_autotune.py
-  - test_max_autotune_decompose_k_dynamic_input:1165
-  - plus extensive suites for precompile/subproc/remote cache
-- test/inductor/test_best_config.py
-  - test_best_config_has_triton_cache_key:52
-- test/inductor/test_codegen_triton.py
-  - test_config_of_sizearg:35
-- test/inductor/test_combo_kernels.py
-  - test_reduce_functions:79
-  - test_activation_functions:59
+  - test_max_autotune_decompose_k_dynamic_input:1165 targets split‑K autotune; suites cover precompile/subproc/remote cache modes.
+- test/inductor/test_best_config.py — best‑config cache key includes Triton metadata:52.
+- test/inductor/test_codegen_triton.py — test_config_of_sizearg:35 covers size‑arg typing and signatures.
 
-Commands
-- Triton kernel param smoke: `pytest -q test/inductor/test_triton_kernels.py::test_triton_kernel_with_kernel_param`
-- CUTLASS tuning threshold: `pytest -q test/inductor/test_cutlass_backend.py::test_max_autotune_cutlass_threshold`
-- Autotune decompose-k: `pytest -q test/inductor/test_max_autotune.py::TestMaxAutotune::test_max_autotune_decompose_k_dynamic_input`
+Minimal runnable snippets
+1) Autotune at compile time vs deferred
+```
+import torch
+from torch._inductor.utils import run_and_get_triton_code
+
+def pointwise(x): return (x * x).relu()
+X = torch.randn(1<<20)
+with torch._inductor.config.patch({"triton.autotune_at_compile_time": False}):
+    c0 = run_and_get_triton_code(torch.compile(pointwise), X)
+with torch._inductor.config.patch({"triton.autotune_at_compile_time": True}):
+    c1 = run_and_get_triton_code(torch.compile(pointwise), X)
+print(len(c0), len(c1))
+```
+
+2) Block‑pointer favor toggles index dtype (tl.int64 vs tl.int32)
+```
+import torch
+from torch._inductor.utils import run_and_get_triton_code
+
+def gemm(a, b): return (a @ b).relu()
+a = torch.randn(128, 64); b = torch.randn(64, 128)
+with torch._inductor.config.patch({"triton.use_block_ptr": False}):
+    c0 = run_and_get_triton_code(torch.compile(gemm), a, b)
+with torch._inductor.config.patch({"triton.use_block_ptr": True}):
+    c1 = run_and_get_triton_code(torch.compile(gemm), a, b)
+print("tl.int64 present?", "tl.int64" in c0, "→", "tl.int64" in c1)
+```
 
 ---
 
 ## Stage 2.6 — Runtime: CUDA Graphs & Collectives
-Focus: cudagraph recording trees, replay semantics, streams, runtime buffer policies.
+What this stage does
+- Applies cudagraph recording/replay (optionally trees) and runtime policies for stable buffers/streams.
 
-Key modules
+Representative tests and themes
 - test/inductor/test_cudagraph_trees.py
-  - test_run_simple:209
-  - test_rng_trees:239
+  - test_run_simple:209 and test_rng_trees:239 validate replay and RNG‑safe trees.
 - test/inductor/test_static_cuda_launcher.py
-  - test_basic:68
-  - test_signed_integers:119
-- test/inductor/test_memory_planning.py
-  - (buffer planning & lifetimes)
-- test/inductor/test_device_assert.py
-  - test_fn:20
-  - test_fn:40
+  - test_basic:68, test_signed_integers:119 ensure static launcher correctness.
+- test/inductor/test_memory_planning.py — buffer lifetimes and reuse.
+- test/inductor/test_device_assert.py — device asserts surface at the correct time (20, 40).
 
-Commands
-- CUDAGraphs simple run: `pytest -q test/inductor/test_cudagraph_trees.py::test_run_simple`
-- Static CUDA launcher basics: `pytest -q test/inductor/test_static_cuda_launcher.py::test_basic`
+Minimal runnable snippet
+```
+import torch
+
+def f(x): return (x.sin() + 1.0).cos()
+X = torch.randn(8192)
+with torch._inductor.config.patch({"triton.cudagraphs": True}):
+    g = torch.compile(f)
+    g(X); g(X)  # second call should replay
+print("cudagraphs replayed (no error)")
+```
 
 ---
 
-## Stage 2.7 — Caching & Hot-Load
-Focus: FX graph cache, kernel caches, artifact (de)serialization, remote caches.
+## Stage 2.7 — Caching & Hot‑Load
+What this stage does
+- Controls FX‑graph cache reuse, code artifact serialization, autotune cache (local/remote/bundled), and subprocess compile modes.
 
-Key modules
+Representative tests and themes
 - test/inductor/test_codecache.py
-  - test_cache_load_function:172
-  - test_cache_guard:1447
-  - TestAutotuneCache, TestStandaloneCompile suites
-- test/inductor/test_remote_cache.py
-  - test_normal_logging:45
-  - test_failure_logging:60
-- test/inductor/test_cudacodecache.py
-  - test_cuda_load:41
-  - test_compilation_error:69
-- test/inductor/test_compile_subprocess.py
-  - test_progressive:100
-  - test_async:178
+  - test_cache_load_function:172 round‑trips a function through cache; test_cache_guard:1447 demonstrates guard‑based diverge leading to recompiles.
+  - TestAutotuneCache, TestStandaloneCompile suites cover autotune cache and standalone compile artifacts.
+- test/inductor/test_remote_cache.py — remote cache logging (45, 60).
+- test/inductor/test_cudacodecache.py — CUDA code cache load/error (41, 69).
+- test/inductor/test_compile_subprocess.py — progressive/async subproc compile (100, 178).
 
-Commands
-- Cache guard divergence: `pytest -q test/inductor/test_codecache.py::TestFxGraphCache::test_cache_guard`
-- CUDA code cache smoke: `pytest -q test/inductor/test_cudacodecache.py::test_cuda_load`
+Minimal runnable snippets
+1) FX‑graph cache hits/misses
+```
+import torch
+from torch._dynamo.utils import counters
+
+def f(x, s):
+    return x * s
+
+x = torch.randn(8)
+counters.clear()
+g = torch.compile(f, fullgraph=True)
+g(x, 2); g(x, 2)
+print("hits:", counters["inductor"]["fxgraph_cache_hit"], "misses:", counters["inductor"]["fxgraph_cache_miss"])
+
+g(x, 3)  # new guard path
+print("after shape/const change → misses:", counters["inductor"]["fxgraph_cache_miss"])
+```
+
+2) Artifact hot‑load
+```
+import torch
+
+def f(x): return (x + 1).relu()
+g = torch.compile(f)
+g(torch.randn(8))
+art = torch.compiler.save_cache_artifacts()
+torch.compiler.load_cache_artifacts(art[0])  # should rehydrate cache entries
+print("loaded artifacts")
+```
 
 ---
 
@@ -281,4 +431,3 @@ These one-liners run focused tests and enable useful logs.
   - `pytest -q test/inductor/test_cudacodecache.py::test_cuda_load`
 
 For convenience, use the helper script: `codex/scripts/inductor_component_tests.sh`.
-

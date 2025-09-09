@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+import os, time, torch
+try:
+    from torch._inductor.utils import run_and_get_code, fresh_cache
+except Exception:
+    run_and_get_code = None
+    class fresh_cache:
+        def __enter__(self): return None
+        def __exit__(self,*a): return False
+ART_DIR = os.path.join(os.path.dirname(__file__), "artifacts"); os.makedirs(ART_DIR, exist_ok=True)
+def dump_code(tag, fn, *args):
+    if run_and_get_code is None:
+        fn(*args); return "// run_and_get_code missing"
+    with fresh_cache(): code = run_and_get_code(fn, *args)
+    torch.compile(fn, backend="inductor", fullgraph=True)(*args)
+    open(os.path.join(ART_DIR, f"{tag}.py"),"w").write(code if isinstance(code,str) else str(code))
+    return code
+
+
+def mm(a,b): return (a@b)+1
+def run(max_autotune, tag):
+    torch._inductor.config.max_autotune = max_autotune
+    torch._inductor.config.max_autotune_gemm_backends = "ATEN,TRITON"
+    dev="cuda" if torch.cuda.is_available() else "cpu"
+    dt=torch.float16 if torch.cuda.is_available() else torch.float32
+    a=torch.randn(1024,1024,device=dev,dtype=dt); b=torch.randn(1024,1024,device=dev,dtype=dt)
+    code=dump_code(f"max_autotune_{tag}", mm, a,b)
+    print(tag, "triton_" in code, "extern_kernels.addmm" in code)
+if __name__=="__main__":
+    run(False,"off"); run(True,"on")
