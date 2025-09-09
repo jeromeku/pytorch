@@ -1,4 +1,5 @@
 # TorchInductor test suite × `torch.compile`: stage-by-stage mapping
+https://chatgpt.com/c/68bde275-4034-8322-98d1-a0bf9ff508ee
 
 > Scope: map **PyTorch’s `test/inductor`** tests to the **exact TorchDynamo → AOTAutograd → Inductor** pipeline stages they exercise, with links and tiny code excerpts (<25 words each). Organized in the same order that Inductor lowers models. This doc complements `codex/vllm-compilation` with upstream test coverage and actionable entrypoints for LLM-focused tuning (extra decompositions, passes, novel ops, or cudagraph plumbing).
 
