@@ -19,19 +19,23 @@ _Updated: 2025‑09‑08_
 ---
 
 ## 1) Core harness used across many tests: `test_torchinductor.py`
-**File**: `test/inductor/test_torchinductor.py` (huge umbrella test module)
+**File**: `test/inductor/test_torchinductor.py:1` (huge umbrella test module)
 
 - **Global config hooks** (turns on debug, index asserts, etc.)
-  > `config.patch({"debug": True, ... "generate_intermediate_hooks": True})` (class setup). citeturn8search5
+  > `config.patch({"debug": True, ... "generate_intermediate_hooks": True})` (class setup).
+  (see `test/inductor/test_torchinductor.py:323`; `torch/utils/_config_module.py:633`). citeturn8search5
 
 - **Capturing the _post‑grad_ FX graph**
-  > `logs_to_string("torch._inductor.compile_fx", "post_grad_graphs")` then `f(*inputs)` to collect. citeturn8search5
+  > `logs_to_string("torch._inductor.compile_fx", "post_grad_graphs")` then `f(*inputs)` to collect.
+  (see `torch/testing/_internal/logging_utils.py:192`). citeturn8search5
 
 - **Unified runner**
-  > `check_model(...): eager vs compiled; reset Dynamo; compare dtypes/strides/gradients; can fetch Triton code.` citeturn8search5
+  > `check_model(...): eager vs compiled; reset Dynamo; compare dtypes/strides/gradients; can fetch Triton code.`
+  (see `test/inductor/test_torchinductor.py:418`). citeturn8search5
 
 - **Compilation entry**
-  > Imports `compile_fx`, `compile_fx_inner`, and helpers like `run_and_get_triton_code`. citeturn8search5
+  > Imports `compile_fx`, `compile_fx_inner`, and helpers like `run_and_get_triton_code`.
+  (see `torch/_inductor/compile_fx.py:2382`, `torch/_inductor/compile_fx.py:743`, `torch/_inductor/utils.py:2220`). citeturn8search5
 
 **What stages it isolates**
 - **Dynamo**: resets state per test; exercises `torch.compile` with device/dtype matrix.
@@ -48,16 +52,17 @@ _Updated: 2025‑09‑08_
 **Goals:** minimize recompiles, validate guard precision, exercise dynamic shapes, and ensure no spurious graph breaks.
 
 - **`test_torchinductor.py` — reset & compile discipline**
-  > `torch._dynamo.reset(); torch._inductor.metrics.reset()` in `setUp/tearDown`. Ensures per‑test clean capture/metrics. citeturn8search5
-- **`test_codecache.py` — cache artifacts and hot load**
+  > `torch._dynamo.reset(); torch._inductor.metrics.reset()` in `setUp/tearDown`. Ensures per‑test clean capture/metrics.
+  (see calls at `test/inductor/test_torchinductor.py:341`, `test/inductor/test_torchinductor.py:342`, `test/inductor/test_torchinductor.py:348`; defs at `torch/_dynamo/__init__.py:112`, `torch/_inductor/metrics.py:59`). citeturn8search5
+- **`test_codecache.py` — cache artifacts and hot load** (`test/inductor/test_codecache.py:1`)
   - Counts frames with a **backend counter**:
-    > `CompileCounterWithBackend("inductor")` + `@torch.compile(..., fullgraph=True)` fixture. citeturn6search0
+    > `CompileCounterWithBackend("inductor")` + `@torch.compile(..., fullgraph=True)` fixture. (see `torch/_dynamo/testing.py:250`). citeturn6search0
   - Records/loads artifacts:
-    > `torch.compiler.save_cache_artifacts()` / `load_cache_artifacts(artifact_bytes)`. citeturn6search0
+    > `torch.compiler.save_cache_artifacts()` / `load_cache_artifacts(artifact_bytes)`. (see `torch/compiler/__init__.py:494`, `torch/compiler/__init__.py:508`). citeturn6search0
   - Asserts FX‑graph cache counters:
-    > `counters["inductor"]["fxgraph_cache_{miss,hit}"]` increments as expected. citeturn6search0
+    > `counters["inductor"]["fxgraph_cache_{miss,hit}"]` increments as expected. (see increments at `torch/_inductor/codecache.py:1548`, `torch/_inductor/codecache.py:1587`). citeturn6search0
 - **Control flow / guards** (referenced in CI/issue):
-  > `test_control_flow.py::test_cond_control_flow_with_precomputed_size` was added to stress guarded branches. citeturn5search3
+  > `test_control_flow.py::test_cond_control_flow_with_precomputed_size` was added to stress guarded branches. (see `test/inductor/test_control_flow.py:366`). citeturn5search3
 
 **Why this matters for LLMs**
 - Use **stance** + counters to catch recompiles before they become tail‑latency spikes. Bucket sequence lengths to stabilize guards.
@@ -68,9 +73,9 @@ _Updated: 2025‑09‑08_
 **Goals:** guarantee prim decomposition coverage and mutation‑free graphs so Inductor can fuse.
 
 - **In‐file (umbrella)**: post‑grad logs
-  > `get_post_grad_graph(f, inputs)` captures the FX graph **after** AOT/functionalization. Perfect to assert that, say, `view+copy` was normalized before fusion. citeturn8search5
+  > `get_post_grad_graph(f, inputs)` captures the FX graph **after** AOT/functionalization. Perfect to assert that, say, `view+copy` was normalized before fusion. (see `test/inductor/test_torchinductor.py:309`). citeturn8search5
 - **Decomposition correctness (umbrella)**
-  > Imports `lowering`, `pad_mm`, etc., which trigger specific decompositions during compile. citeturn8search5
+  > Imports `lowering`, `pad_mm`, etc., which trigger specific decompositions during compile. (see `torch/_inductor/fx_passes/pad_mm.py:761`). citeturn8search5
 
 **Why this matters for LLMs**
 - Custom **KV‑layout** or **attention bias** decompositions can move complexity out of runtime, enabling larger fusions.
@@ -81,7 +86,7 @@ _Updated: 2025‑09‑08_
 **Goals:** ensure the FX graph is in the shape Inductor expects; validate pattern rewrites.
 
 - **Logging post‑grad graphs**
-  > The `logs_to_string(..., "post_grad_graphs")` channel is the exact hook Inductor exposes for verifying this stage. citeturn8search5
+  > The `logs_to_string(..., "post_grad_graphs")` channel is the exact hook Inductor exposes for verifying this stage. (see `torch/testing/_internal/logging_utils.py:192`). citeturn8search5
 
 - **Device & dtype matrices**
   > Parametrized dtypes and devices enforce the FX graph is portable across backends (e.g., BF16 path on SM80+). citeturn8search5
@@ -95,7 +100,7 @@ _Updated: 2025‑09‑08_
 **Goals:** scheduler legality, loop IR, fusion groups, and emitted kernel parity.
 
 - **Umbrella file codegen queries**
-  > Helpers like `run_and_get_triton_code`, `run_and_get_kernels` inspect emitted kernels for specific ops. citeturn8search5
+  > Helpers like `run_and_get_triton_code`, `run_and_get_kernels` inspect emitted kernels for specific ops. (see `torch/_inductor/utils.py:2220`, `torch/_inductor/utils.py:2149`). citeturn8search5
 
 - **Max‑autotune suite (referenced)**
   > `test_max_autotune.py` is dedicated to autotune/fusion; recent CUDA 12.6/H100 reports catalog failures and shape‑specialization quirks. Use them as regression probes. citeturn5search0turn5search4
@@ -139,15 +144,15 @@ _Updated: 2025‑09‑08_
 ### 2.7 Caching & hot‑load
 **Goals:** exercise Inductor & PGO caches, FX‑graph cache, artifact bundling and reload.
 
-- **`test_codecache.py` (rich examples)**
+- **`test_codecache.py` (rich examples)** (`test/inductor/test_codecache.py:1`)
   - Fullgraph cache miss/hit counters
-    > `fxgraph_cache_{miss,hit}` count changes across shapes. citeturn6search0
+    > `fxgraph_cache_{miss,hit}` count changes across shapes. (see `torch/_inductor/codecache.py:1548`, `torch/_inductor/codecache.py:1587`). citeturn6search0
   - Artifact round‑trip
-    > `save_cache_artifacts()` → bytes blob → `load_cache_artifacts(...)` hot‑loads functions. citeturn6search0
+    > `save_cache_artifacts()` → bytes blob → `load_cache_artifacts(...)` hot‑loads functions. (see `torch/compiler/__init__.py:494`, `torch/compiler/__init__.py:508`). citeturn6search0
   - PGO swap & generic caches
     > Registers arbitrary cache artifacts via `CacheArtifactFactory.register`. Shows the generic hot‑load API surface. citeturn6search0
   - Guard behavior in cache lookups
-    > `test_cache_guard` demonstrates guard divergence leading to a fresh compile. citeturn6search0
+    > `test_cache_guard` demonstrates guard divergence leading to a fresh compile. (see `test/inductor/test_codecache.py:1447`). citeturn6search0
 
 **LLM optimization ideas**
 - Capture and ship **pre‑tuned**, **bucket‑specialized** artifacts (kernels + PGO profiles) for your top SKUs; verify parity with hot‑load tests.
@@ -156,20 +161,19 @@ _Updated: 2025‑09‑08_
 
 ## 3) Other notable test families (brief)
 - **Compiled autograd**
-  > `test_compiled_autograd.py` focuses on compiled backward partitions and fake‑tensor mode correctness; CI often flags verbosity/graph mismatch failures. citeturn7search4turn8search6
+  > `test_compiled_autograd.py` focuses on compiled backward partitions and fake‑tensor mode correctness; CI often flags verbosity/graph mismatch failures. (see `test/inductor/test_compiled_autograd.py:125`). citeturn7search4turn8search6
 - **AOTInductor**
-  > `test_aot_inductor.py` checks AOT ABI and model export; known gaps with ops like `torch.select` documented with a proposed test. citeturn7search6turn5search1
+  > `test_aot_inductor.py` checks AOT ABI and model export; known gaps with ops like `torch.select` documented with a proposed test. (see `test/inductor/test_aot_inductor.py:166`). citeturn7search6turn5search1
 - **Control flow**
-  > `test_control_flow.py` targets Dynamo’s graph‑break/capture coverage for branches/loops; occasionally trips platform decorators. citeturn5search3
+  > `test_control_flow.py` targets Dynamo’s graph‑break/capture coverage for branches/loops; occasionally trips platform decorators. (see `test/inductor/test_control_flow.py:1`). citeturn5search3
 
 ---
 
-## 4) API surface & entrypoints (documented and semi‑undocumented)
-- **Dynamo/compile**: `torch.compile`, `torch.compiler.set_stance`, `torch._dynamo.reset`, `TORCH_LOGS=recompiles` for diagnostics. Docs: dynamic shapes. citeturn0search4turn0search23
+- **Dynamo/compile**: `torch.compile`, `torch.compiler.set_stance`, `torch._dynamo.reset`, `TORCH_LOGS=recompiles` for diagnostics. Docs: dynamic shapes. (see `torch/compiler/__init__.py:258`, `torch/_dynamo/__init__.py:112`). citeturn0search4turn0search23
 - **Inductor config**: `torch._inductor.config.patch({...})` toggles IR/debug/autotune.
-- **FX post‑grad logs**: `logs_to_string("torch._inductor.compile_fx", "post_grad_graphs")` is the sanctioned hook to inspect FX after functionalization. citeturn8search5
-- **Codegen inspection**: `run_and_get_triton_code`, `run_and_get_kernels`, `run_and_get_cpp_code`. citeturn8search5
-- **Caching**: `torch.compiler.save_cache_artifacts()` / `load_cache_artifacts()` + counters in `torch._inductor.counters`. citeturn6search0
+- **FX post‑grad logs**: `logs_to_string("torch._inductor.compile_fx", "post_grad_graphs")` is the sanctioned hook to inspect FX after functionalization. (see `torch/testing/_internal/logging_utils.py:192`). citeturn8search5
+- **Codegen inspection**: `run_and_get_triton_code`, `run_and_get_kernels`, `run_and_get_cpp_code`. (see `torch/_inductor/utils.py:2220`, `torch/_inductor/utils.py:2149`, `torch/_inductor/utils.py:2901`). citeturn8search5
+- **Caching**: `torch.compiler.save_cache_artifacts()` / `load_cache_artifacts()` + counters in `torch._inductor.counters`. (see `torch/compiler/__init__.py:494`, `torch/compiler/__init__.py:508`, `torch/_dynamo/utils.py:163`). citeturn6search0
 
 ---
 
@@ -188,15 +192,14 @@ _Updated: 2025‑09‑08_
 
 ### Appendix A — small code anchors
 - Post‑grad log capture:
-  > `log_stream, ctx = logs_to_string("torch._inductor.compile_fx", "post_grad_graphs")` citeturn8search5
+  > `log_stream, ctx = logs_to_string("torch._inductor.compile_fx", "post_grad_graphs")` (see `torch/testing/_internal/logging_utils.py:192`). citeturn8search5
 - Test harness config patch:
-  > `config.patch({"debug": True, "debug_index_asserts": True, ...})` citeturn8search5
+  > `config.patch({"debug": True, "debug_index_asserts": True, ...})` (see `test/inductor/test_torchinductor.py:323`). citeturn8search5
 - Cache artifacts round‑trip:
-  > `artifacts = torch.compiler.save_cache_artifacts(); load_cache_artifacts(artifact_bytes)` citeturn6search0
+  > `artifacts = torch.compiler.save_cache_artifacts(); load_cache_artifacts(artifact_bytes)` (see `torch/compiler/__init__.py:494`, `torch/compiler/__init__.py:508`). citeturn6search0
 - Compile counter backend:
-  > `backend = CompileCounterWithBackend("inductor"); @torch.compile(backend=backend)` citeturn6search0
+  > `backend = CompileCounterWithBackend("inductor"); @torch.compile(backend=backend)` (see `torch/_dynamo/testing.py:250`). citeturn6search0
 
 ---
 
 > Questions to investigate next: map **specific tests** (e.g., `test_max_autotune_decompose_k_dynamic_input`) to the Triton configs they generate and identify which KV‑friendly tile heuristics reduce decode P50/P99.
-
