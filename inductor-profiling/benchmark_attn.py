@@ -72,13 +72,11 @@ def make_inputs(model_config: ModelConfig, device: str = DEVICE, dtype: torch.dt
     return query, key, value
 
 
-def causal_sdpa(num_key_value_groups, query, key, value, backwards: bool = False):
+def causal_sdpa(num_key_value_groups, query, key, value, *, enable_gqa: bool, backwards: bool):
     query = query.transpose(1, 2)
     key = key.transpose(1, 2)
     value = value.transpose(1, 2)
-    out = F.scaled_dot_product_attention(
-        query, key, value, is_causal=True, enable_gqa=num_key_value_groups != 1
-    )
+    out = F.scaled_dot_product_attention(query, key, value, is_causal=True, enable_gqa=enable_gqa)
     out = out.transpose(1, 2).contiguous()
     if backwards:
         out.backward(torch.ones_like(out))
@@ -90,27 +88,36 @@ def benchmark_sdpa(
     key: torch.Tensor,
     value: torch.Tensor,
     backend: SDPBackend,  # type: ignore
+    backwards: bool = False,
 ):
+    _sdpa = partial(
+        causal_sdpa, enable_gqa=model_config.num_key_value_groups > 1, backwards=backwards
+    )
     with sdpa_kernel(backend):
         t_us = benchmark_torch_function_in_microseconds(
-            causal_sdpa, model_config.num_key_value_groups, query, key, value
+            _sdpa, model_config.num_key_value_groups, query, key, value
         )
 
     return t_us
 
 
 def configure_flex_attn(
-    model_config: ModelConfig,
-    batch_size: int,
+    *,
     q_seq_len: int,
     kv_seq_len: int,
+    batch_size: int = None,
+    num_heads: int = None,
     compile_config: dict = None,
+    device: str = DEVICE,
+    separate_full_blocks: bool = True
 ):
     block_mask = create_causal_block_mask_fast(
         batch_size=batch_size,
-        num_heads=model_config.num_heads,
+        num_heads=num_heads,
         q_seq_len=q_seq_len,
         kv_seq_len=kv_seq_len,
+        device=device,
+        separate_full_blocks=separate_full_blocks
     )
     flex_attention_compiled = torch.compile(flex_attention, **compile_config)
     return block_mask, flex_attention_compiled
@@ -149,55 +156,79 @@ def benchmark_flex_attn(
     value: torch.Tensor,
     compile_config: dict = None,  # type: ignore,
     backwards: bool = False,
+    mask_batch_size: int = None,  # Sparsity pattern is independent of bs and num_heads, so leave as None
+    mask_num_heads: int = None,
+    device: str = None,
+    separate_full_blocks: bool = True
 ):
+    assert query.ndim == 4
+    assert key.ndim == 4
+    assert value.ndim == 4
+    assert query.shape[2] == model_config.num_heads
+    assert key.shape[2] == model_config.num_key_value_heads
+    assert key.shape == value.shape
+    
+    device = device or query.device
+
+    q_len, kv_len = query.shape[1], key.shape[1]
     block_mask, flex_attn_func = configure_flex_attn(
-        model_config, query, key, value, compile_config=compile_config
+        batch_size=mask_batch_size,
+        num_heads=mask_num_heads,
+        q_seq_len=q_len,
+        kv_seq_len=kv_len,
+        compile_config=compile_config,
+        device=device,
+        separate_full_blocks=separate_full_blocks
     )
-    enable_gqa = model_config.num_key_value_groups > 1
-    flex_attn_func = partial(flex_attn_func, enable_gqa=enable_gqa, backwards=backwards)
+    flex_runner = partial(run_flex_attn, enable_gqa=model_config.num_key_value_groups > 1, backwards=backwards)
     t_us = benchmark_torch_function_in_microseconds(
-        run_flex_attn, flex_attn_func, block_mask, query, key, value
+        flex_runner, flex_attn_func, block_mask, query, key, value
     )
     return t_us
 
 
-def clone_inputs(*args):
-    return [t.detach().clone() for t in args]
+def clone_inputs(*args, requires_grad: bool = False):
+    return [t.detach().clone().requires_grad_(requires_grad) for t in args]
 
-
-class BenchmarkContext:
-    def __init__(self, query, key, value, tag: str = ""):
-        self.query, self.key, self.value = query, key, value
-        self.tag = tag
-
-    def __enter__(self):
-        print(f"Benchmarking {self.tag}")
-        return self
-
-    def __exit__(self, *args, **kwargs):
-        pass
-
-    def get_inputs(self):
-        return clone_inputs(self.query, self.key, self.value)
-
-    def set_tag(self, tag: str):
-        self.tag = tag
-
-    def set_benchmark_fn(self, fn: callable, *args, **kwargs):
-        return 
 def run_benchmarks(
     model_config: ModelConfig,
     query: torch.Tensor,
     key: torch.Tensor,
     value: torch.Tensor,
-    sdpbackend: SDPBackend = SDPBackend.FLASH_ATTENTION
+    sdpbackend: SDPBackend = SDPBackend.FLASH_ATTENTION,
+    flex_attn_compile_config: dict = None,
+    backwards: bool = False,
 ):
+    q, k, v = clone_inputs(query, key, value, requires_grad=backwards)
+    t_us = benchmark_sdpa(model_config, q, k, v, backend=sdpbackend, backwards=backwards)
+    flavor = "fwd-bwd" if backwards else "fwd"
 
-    q, k, v = clone_inputs(query, key, value)
-    t_us = benchmark_sdpa(model_config, q, k, v, backend=sdpbackend)
-    print(f"SDPA attn with {sdpbackend}: {t_us:.2f}us")
+    print(f"SDPA attn with {sdpbackend}, {flavor}: {t_us:.2f}us")
+
+    q, k, v = clone_inputs(query, key, value, requires_grad=backwards)
+    t_us = benchmark_flex_attn(
+        model_config, q, k, v, compile_config=flex_attn_compile_config, backwards=backwards
+    )
+    print(f"Flex attn with {flex_attn_compile_config}, {flavor}: {t_us:.2f}us")
+
 
 if __name__ == "__main__":
+    from torch._logging import set_logs
+    set_logs(recompiles_verbose=True)
+
     config = ModelConfig()
+    backwards = True
+
     query, key, value = make_inputs(config, device=DEVICE, dtype=DTYPE)
-    run_benchmarks(config, query, key, value)
+
+    sdpbackend = SDPBackend.FLASH_ATTENTION
+    flex_attn_compile_config = {"fullgraph": False, "dynamic": True}
+    run_benchmarks(
+        config,
+        query,
+        key,
+        value,
+        sdpbackend=sdpbackend,
+        flex_attn_compile_config=flex_attn_compile_config,
+        backwards=backwards,
+    )
