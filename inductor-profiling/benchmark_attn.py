@@ -109,9 +109,14 @@ def configure_flex_attn(
     num_heads: int = None,
     compile_config: dict = None,
     device: str = DEVICE,
-    separate_full_blocks: bool = True
+    separate_full_blocks: bool = True,
+    compile_block_mask_fn: bool = True
 ):
-    block_mask = create_causal_block_mask_fast(
+    if compile_block_mask_fn:
+        _block_mask_fn = torch.compile(create_causal_block_mask_fast)
+    else: 
+        _block_mask_fn = create_causal_block_mask_fast
+    block_mask = _block_mask_fn(
         batch_size=batch_size,
         num_heads=num_heads,
         q_seq_len=q_seq_len,
@@ -210,7 +215,6 @@ def run_benchmarks(
         model_config, q, k, v, compile_config=flex_attn_compile_config, backwards=backwards
     )
     print(f"Flex attn with {flex_attn_compile_config}, {flavor}: {t_us:.2f}us")
-
 
 if __name__ == "__main__":
     from torch._logging import set_logs
