@@ -1321,6 +1321,7 @@ def trace_structured(
     payload is an arbitrary string, which can be arbitrarily long (but expected to have
     newlines so no lines are too long)
     """
+    print(f"DEBUG_TRACE:{name}")
     assert name not in [
         "rank",
         "compiled_autograd_id",

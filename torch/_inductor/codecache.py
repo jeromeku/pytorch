@@ -1173,6 +1173,7 @@ class FxGraphCache(GuardedCache[CompiledFxGraph]):
         These don't always happen (i.e. on a cache miss, so they are in a separate function from
         CompiledFxGraph.post_compile)
         """
+        breakpoint()
         if bundle := graph._triton_bundle:
             triton_bundler_meta = TritonBundler.read_and_emit(bundle)
             if (meta := triton_bundler_meta) is not None:
