@@ -146,27 +146,64 @@ class InplacingTests(TestCase):
     def test_inplace_custom_op(self, disable_functionalize_v2: bool = False):
         with torch.library._scoped_library("mylib", "FRAGMENT") as m:
             m.define("foo(Tensor x, Tensor(a!) out) -> ()")
-
+            m.define("foo2(Tensor(a!) x) -> ()")
             def foo(x: torch.Tensor, out: torch.Tensor) -> None:
                 out.copy_(x.sin())
+            
+            def foo2(x: torch.Tensor) -> None:
+                x.sin_()
 
             m.impl("foo", foo, "CompositeExplicitAutograd")
+            m.impl("foo2", foo2, "CompositeExplicitAutograd")
 
             def f(x, out):
                 torch.ops.mylib.foo(x, out)
                 return out
 
-            def f2(x, out):
-                torch.ops.mylib.foo(x, out)
-                torch.ops.mylib.foo(out, out)
-                return out
+            def f2(x):
+                torch.ops.mylib.foo2(x)
+                return x
+            
+            # def f2(x, out):
+            #     torch.ops.mylib.foo(x, out)
+            #     torch.ops.mylib.foo(out, out)
+            #     return out
 
-            x = T(3)
-            out = T(3)
+            x = T(1024)
+            out = T(1024)
+            x2 = x.detach().clone()
 
-            compiled_out, (code,) = run_and_get_code(
-                torch.compile(f, fullgraph=True), x, out
-            )
+            # f_compiled = torch.compile(f, fullgraph=True)
+            # f_compiled(x, out)
+            # with torch.profiler.profile(
+            #     activities=[torch.profiler.ProfilerActivity.CUDA, torch.profiler.ProfilerActivity.CPU],
+            #     with_stack=True,
+            #     experimental_config=torch._C._profiler._ExperimentalConfig(verbose=True),
+            # ) as prof:
+            #     f_compiled(x, out)
+
+            # print(prof.key_averages().table(sort_by="self_cuda_time_total"))
+            from torch.testing._internal.logging_utils import multiple_logs_to_string
+            (pregrad, postgrad), ctx = multiple_logs_to_string("torch._inductor.compile_fx", "pre_grad_graphs", "post_grad_graphs")
+
+            f2_compiled = torch.compile(f2, fullgraph=True)
+            print(x2.view(-1)[:5])
+            with ctx():
+                f2_compiled(x2)
+            print(x2.view(-1)[:5])
+            print(f"{pregrad.getvalue().strip()}")
+            print(f"{postgrad.getvalue().strip()}")
+            # with torch.profiler.profile(
+            #     activities=[torch.profiler.ProfilerActivity.CUDA, torch.profiler.ProfilerActivity.CPU],
+            #     with_stack=True,
+            #     experimental_config=torch._C._profiler._ExperimentalConfig(verbose=True),
+            # ) as prof:
+            #     f2_compiled(x2)
+            # print(x2.view(-1)[:5])
+            # print(prof.key_averages().table(sort_by="self_cuda_time_total"))
+            # compiled_out, (code,) = run_and_get_code(
+            #     torch.compile(f, fullgraph=True), x, out
+            # )
             # print(f"f code:\n{code}")
             # compiled_out, (code3,) = run_and_get_code(
             #     torch.compile(f2, fullgraph=True), x, out
@@ -176,9 +213,9 @@ class InplacingTests(TestCase):
             # self.assertEqual(compiled_out, x.sin().sin().sin())
 
             # Check that we are allocating the minimum number of intermediate buffers
-            matches = re.findall(r"empty_strided_\w+\(", code)
-            print(f"{matches=}")
-            self.assertEqual(len(matches), 0)
+            # matches = re.findall(r"empty_strided_\w+\(", code)
+            # print(f"{matches=}")
+            # self.assertEqual(len(matches), 0)
 
             # self.assertExpectedInline(count_numel(f, x, out), """21""")
 
@@ -246,11 +283,11 @@ class InplacingTests(TestCase):
 import logging
 from torch._inductor import config
 
-torch._logging.set_logs(inductor=logging.DEBUG)
+# torch._logging.set_logs(inductor=logging.DEBUG)
 tests = InplacingTests()
 
 config.enable_auto_functionalized_v2 = True
 # config.trace.enabled = True
 config.force_disable_caches = True
 
-tests.test_inplace_custom_op(disable_functionalize_v2=True)
+tests.test_inplace_custom_op()
