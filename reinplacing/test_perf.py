@@ -178,7 +178,7 @@ class InplacingTests(TestCase):
             # Check that we are allocating the minimum number of intermediate buffers
             matches = re.findall(r"empty_strided_\w+\(", code)
             print(f"{matches=}")
-            # self.assertEqual(len(matches), 0)
+            self.assertEqual(len(matches), 0)
 
             # self.assertExpectedInline(count_numel(f, x, out), """21""")
 
@@ -248,9 +248,9 @@ from torch._inductor import config
 
 torch._logging.set_logs(inductor=logging.DEBUG)
 tests = InplacingTests()
-disable_autofunctionalize_v2 = False
-config.enable_auto_functionalized_v2 = disable_autofunctionalize_v2
-config.trace.enabled = True
+
+config.enable_auto_functionalized_v2 = True
+# config.trace.enabled = True
 config.force_disable_caches = True
 
 tests.test_inplace_custom_op(disable_functionalize_v2=True)
